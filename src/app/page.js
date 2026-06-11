@@ -1,11 +1,11 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 
-// Device specs: camera horizontal FOV (approximate) and sensor width
 const DEVICES = {
-  'ipad-10th': { name: 'iPad 10th Gen', fov: 63.8, sensorWidth: 5.76 }, // 1/4" sensor
-  'iphone-15-plus': { name: 'iPhone 15 Plus', fov: 77.5, sensorWidth: 6.73 }, // 1/1.56" sensor
-  'samsung-a54': { name: 'Samsung A54', fov: 85.0, sensorWidth: 6.4 } // 1/1.76" sensor
+  'ipad-10th': { name: 'iPad 10th Gen', fov: 63.8, sensorWidth: 5.76 },
+  'iphone-15-plus': { name: 'iPhone 15 Plus', fov: 77.5, sensorWidth: 6.73 },
+  'samsung-a54': { name: 'Samsung A54', fov: 85.0, sensorWidth: 6.4 },
+  'samsung-a56': { name: 'Samsung A56', fov: 85.3, sensorWidth: 7.5 }
 };
 
 const STYLES = `
@@ -311,6 +311,109 @@ const STYLES = `
     font-variant-numeric: tabular-nums;
   }
 
+  /* ── Verified results (very large, above nutri-grade) ── */
+  .rfr-verified-block {
+    background: #0d1117;
+    border: 1px solid #b8955a44;
+    border-left: 3px solid #b8955a;
+    padding: 22px 24px 18px;
+    margin-bottom: 20px;
+    animation: rfr-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .rfr-verified-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: #b8955a;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .rfr-verified-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #b8955a33;
+  }
+
+  .rfr-verified-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border: 1px solid #2c2c30;
+  }
+
+  .rfr-verified-item {
+    padding: 20px 18px 16px;
+    position: relative;
+  }
+
+  .rfr-verified-item + .rfr-verified-item {
+    border-left: 1px solid #2c2c30;
+  }
+
+  .rfr-verified-key {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.54rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #9a9790;
+    margin-bottom: 10px;
+  }
+
+  .rfr-verified-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 2.8rem;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: #e8e4dc;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rfr-verified-unit {
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    color: #b8955a;
+    margin-top: 6px;
+    text-transform: uppercase;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .rfr-verified-accent {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: #b8955a;
+    margin-top: 14px;
+  }
+
+  .rfr-vision-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.5rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #5dba7f;
+    border: 1px solid #5dba7f44;
+    padding: 3px 8px;
+    margin-bottom: 14px;
+  }
+
+  .rfr-vision-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #5dba7f;
+    animation: rfr-blink 1.8s ease-in-out infinite;
+  }
+
   /* ── Analysis output: rich markdown rendering ── */
   .rfr-report-output {
     background: #111113;
@@ -521,15 +624,60 @@ function parseGradeClass(text) {
   return 'grade-u';
 }
 
-function AnalysisOutput({ text, loading }) {
-  if (loading) {
-    return (
-      <div className="rfr-report-output">
-        <div className="rfr-loading-row">
-          <div className="rfr-spinner" />
-          Analyzing
+function VerifiedResults({ verified, visionUsed }) {
+  if (!verified || (verified.length === null && verified.refractiveIndex === null && verified.brix === null)) {
+    return null;
+  }
+  return (
+    <div className="rfr-verified-block">
+      <div className="rfr-verified-label">AI-Verified Measurements</div>
+      {visionUsed && (
+        <div className="rfr-vision-badge">
+          <span className="rfr-vision-dot" />
+          Vision Analysis Active
+        </div>
+      )}
+      <div className="rfr-verified-grid">
+        <div className="rfr-verified-item">
+          <div className="rfr-verified-key">Verified Length</div>
+          <div className="rfr-verified-val">
+            {verified.length !== null ? verified.length.toFixed(2) : '—'}
+          </div>
+          <div className="rfr-verified-unit">cm</div>
+          <span className="rfr-verified-accent" />
+        </div>
+        <div className="rfr-verified-item">
+          <div className="rfr-verified-key">Verified Refractive Index</div>
+          <div className="rfr-verified-val" style={{ fontSize: '2.1rem' }}>
+            {verified.refractiveIndex !== null ? verified.refractiveIndex.toFixed(4) : '—'}
+          </div>
+          <div className="rfr-verified-unit">n</div>
+          <span className="rfr-verified-accent" />
+        </div>
+        <div className="rfr-verified-item">
+          <div className="rfr-verified-key">Verified Brix</div>
+          <div className="rfr-verified-val">
+            {verified.brix !== null ? verified.brix.toFixed(1) : '—'}
+          </div>
+          <div className="rfr-verified-unit">° Brix</div>
+          <span className="rfr-verified-accent" />
         </div>
       </div>
+    </div>
+  );
+}
+
+function AnalysisOutput({ text, loading, verified, visionUsed }) {
+  if (loading) {
+    return (
+      <>
+        <div className="rfr-report-output">
+          <div className="rfr-loading-row">
+            <div className="rfr-spinner" />
+            Analyzing with DeepSeek Vision…
+          </div>
+        </div>
+      </>
     );
   }
 
@@ -544,10 +692,25 @@ function AnalysisOutput({ text, loading }) {
   const lines = text.split('\n');
   const elements = [];
   let key = 0;
+  let skipVerifiedSection = false;
 
   for (const raw of lines) {
     const line = raw.trim();
     if (!line) continue;
+
+    // Skip the VERIFIED MEASUREMENTS section from the text output
+    // since we render it separately with large styling
+    if (/VERIFIED MEASUREMENTS/i.test(line)) {
+      skipVerifiedSection = true;
+      continue;
+    }
+    if (skipVerifiedSection) {
+      if (/^###/.test(line) && !/VERIFIED/i.test(line)) {
+        skipVerifiedSection = false;
+      } else {
+        continue;
+      }
+    }
 
     if (/NUTRI.GRADE STATUS/i.test(line)) {
       const gradeClass = parseGradeClass(line);
@@ -558,7 +721,6 @@ function AnalysisOutput({ text, loading }) {
       continue;
     }
 
-
     if (/^###/.test(line)) {
       const clean = line.replace(/^#+\s*/, '');
       elements.push(
@@ -566,7 +728,6 @@ function AnalysisOutput({ text, loading }) {
       );
       continue;
     }
-
 
     if (/^\*\s/.test(line)) {
       const content = line.replace(/^\*\s*/, '');
@@ -599,7 +760,12 @@ function AnalysisOutput({ text, loading }) {
     );
   }
 
-  return <div className="rfr-report-output">{elements}</div>;
+  return (
+    <>
+      <VerifiedResults verified={verified} visionUsed={visionUsed} />
+      <div className="rfr-report-output">{elements}</div>
+    </>
+  );
 }
 
 export default function SmartRefractometer() {
@@ -622,6 +788,7 @@ export default function SmartRefractometer() {
   const [baseXWater, setBaseXWater] = useState(320);
   const [calibrationOffset, setCalibrationOffset] = useState(null);
   const [zeroOffset, setZeroOffset] = useState(0);
+  const [zeroPressed, setZeroPressed] = useState(false);
   const currentLaserPos = useRef(null);
   const [threshold, setThreshold] = useState(190);
   const [liveAngle, setLiveAngle] = useState(23.6);
@@ -634,8 +801,33 @@ export default function SmartRefractometer() {
   const [savedRI, setSavedRI] = useState(1.333);
   const [savedLength, setSavedLength] = useState(0.0);
 
+  // Snapshots for vision API
+  const [calibrationSnapshot, setCalibrationSnapshot] = useState(null); // taken on zero
+  const [measurementSnapshot, setMeasurementSnapshot] = useState(null); // taken on capture
+
   const [apiResponse, setApiResponse] = useState('');
+  const [verifiedResults, setVerifiedResults] = useState(null);
+  const [visionUsed, setVisionUsed] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  /** Captures the current canvas frame as a base64 JPEG string (no data-URL prefix). */
+  const captureCanvasSnapshot = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    try {
+      // Draw to a smaller offscreen canvas to keep payload manageable (~320×240)
+      const offscreen = document.createElement('canvas');
+      offscreen.width = 320;
+      offscreen.height = 240;
+      const ctx = offscreen.getContext('2d');
+      ctx.drawImage(canvas, 0, 0, 320, 240);
+      const dataUrl = offscreen.toDataURL('image/jpeg', 0.7);
+      // Strip the "data:image/jpeg;base64," prefix
+      return dataUrl.split(',')[1];
+    } catch {
+      return null;
+    }
+  };
 
   const rgbToHsv = (r, g, b) => {
     r /= 255; g /= 255; b /= 255;
@@ -677,14 +869,17 @@ export default function SmartRefractometer() {
     if (setupStep !== 'click_paper_edges' || clickPoints.length >= 2) return;
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
+    const scaleX = canvas.width / rect.width;
+    const x = (e.clientX - rect.left) * scaleX;
     const updated = [...clickPoints, x];
     setClickPoints(updated);
     if (updated.length === 2) {
-      const delta = Math.abs(updated[1] - updated[0]);
-      setMmPerPixel(297 / delta);
-      setBaseXWater((updated[0] + updated[1]) / 2);
-      // Start 1-second buffer before measuring
+      const deltaPx = Math.abs(updated[1] - updated[0]);
+      const A4_WIDTH_MM = 297;
+      const mmPerPixelCalculated = A4_WIDTH_MM / deltaPx;
+      setMmPerPixel(mmPerPixelCalculated);
+      const paperCenter = (updated[0] + updated[1]) / 2;
+      setBaseXWater(paperCenter);
       setIsBuffering(true);
       setTimeout(() => {
         setIsBuffering(false);
@@ -693,27 +888,48 @@ export default function SmartRefractometer() {
     }
   };
 
-  const startDeviceCalibration = () => {
+  const startDeviceCalibration = async () => {
     if (!selectedDevice || !deviceDistance || !prismDistance) {
       alert('Please select a device and enter distances.');
       return;
     }
-    // Calculate mmPerPixel from device FOV and sensor width
     const device = DEVICES[selectedDevice];
-    // At known distance, the visible width in mm = 2 * distance * tan(FOV/2)
-    const visibleWidthMm = 2 * parseFloat(deviceDistance) * Math.tan((device.fov / 2) * Math.PI / 180);
-    // Sensor width / visible width = pixels per mm (then convert to mm per pixel)
-    const pxPerMm = 640 / visibleWidthMm;
-    setMmPerPixel(1000 / pxPerMm);
-    setBaseXWater(320);
-    // Start 1-second buffer before measuring
-    setIsBuffering(true);
-    setTimeout(() => {
-      setIsBuffering(false);
-      setSetupStep('active_run');
-    }, 1000);
-  };
 
+    const distanceM = parseFloat(deviceDistance) / 1000;
+    const fovRad = (device.fov * Math.PI) / 180;
+    const visibleWidthM = 2 * distanceM * Math.tan(fovRad / 2);
+    const visibleWidthMm = visibleWidthM * 1000;
+    const sensorWidthMm = device.sensorWidth;
+    const focalLengthMm = (sensorWidthMm / 2) / Math.tan(fovRad / 2);
+    const imageHeightPx = 480;
+    const mmPerPixelCalculated = visibleWidthMm / 640;
+
+    setMmPerPixel(mmPerPixelCalculated);
+    setBaseXWater(320);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 640, height: 480, facingMode: 'environment' }
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await new Promise((resolve, reject) => {
+          videoRef.current.onloadedmetadata = resolve;
+          videoRef.current.onerror = reject;
+        });
+        await videoRef.current.play();
+      }
+      setIsBuffering(true);
+      setTimeout(() => {
+        setIsBuffering(false);
+        setSetupStep('active_run');
+      }, 1000);
+    } catch (err) {
+      alert('Camera access denied or unavailable.');
+      console.error(err);
+    }
+  };
   useEffect(() => {
     if (setupStep === 'input_distance') return;
     if (!streamRef.current) return;
@@ -741,17 +957,13 @@ export default function SmartRefractometer() {
           const frame = ctx.getImageData(0, 0, c.width, c.height);
           const d = frame.data;
           let tx = -1, ty = -1, best = 0;
-          // More selective red detection - reduce white noise
-          // Require high red component and high saturation, less strict on value
           const isRedLaser = (r, g, b) => {
             const max = Math.max(r, g, b);
             const min = Math.min(r, g, b);
             const redDominance = r - Math.max(g, b);
             const saturation = max === 0 ? 0 : (max - min) / max;
-            // Red laser: dominant red, high saturation, not too dim
             return r > 180 && redDominance > 80 && saturation > 0.5 && r > g * 1.5;
           };
-          // White detection only if it's very bright AND somewhat reddish (laser center)
           const isWhiteLaser = (r, g, b) => {
             const avg = (r + g + b) / 3;
             const rDominant = r > g && r > b;
@@ -761,7 +973,7 @@ export default function SmartRefractometer() {
           for (let i = 0; i < d.length; i += 16) {
             const r = d[i], g = d[i + 1], b = d[i + 2];
             if (isRedLaser(r, g, b) || isWhiteLaser(r, g, b)) {
-              const score = r * 2 - g - b; // Favor red, penalize green/blue
+              const score = r * 2 - g - b;
               if (score > best) {
                 best = score;
                 tx = (i / 4) % c.width;
@@ -770,7 +982,7 @@ export default function SmartRefractometer() {
             }
           }
           if (tx !== -1) {
-            // Set calibration offset on first detection (only if not already set)
+            // Set calibration offset on first detection
             if (calibrationOffset === null && !isBuffering) {
               setCalibrationOffset(tx);
             }
@@ -785,24 +997,24 @@ export default function SmartRefractometer() {
             ctx.fillStyle = '#b8955a';
             ctx.fill();
 
-            // Draw vector arrow from origin (calibration point) to current position
+            // Use baseXWater during buffering, calibrationOffset after
             const originX = calibrationOffset !== null ? calibrationOffset : baseXWater;
-            if (calibrationOffset !== null && Math.abs(tx - originX) > 2) {
-              const dx = tx - originX;
+            const zeroRefX = originX + zeroOffset;
+
+            if (Math.abs(tx - zeroRefX) > 2) {
+              const dx = tx - zeroRefX;
               const dy = ty - c.height / 2;
               const len = Math.sqrt(dx * dx + dy * dy);
-              const ux = dx / len; // unit vector x
-              const uy = dy / len; // unit vector y
-              
-              // Arrow line
+              const ux = dx / len;
+              const uy = dy / len;
+
               ctx.strokeStyle = '#b8955a';
               ctx.lineWidth = 2;
               ctx.beginPath();
-              ctx.moveTo(originX, c.height / 2);
+              ctx.moveTo(zeroRefX, c.height / 2);
               ctx.lineTo(tx, ty);
               ctx.stroke();
-              
-              // Arrow head
+
               const headLen = 12;
               ctx.beginPath();
               ctx.moveTo(tx, ty);
@@ -812,36 +1024,48 @@ export default function SmartRefractometer() {
               ctx.stroke();
             }
 
-            // Corrected calculations for equilateral prism (60°)
-            const D = parseFloat(prismDistance) || 2500; // prism-to-screen distance in mm
-            
-            // Calculate displacement relative to base position, accounting for offsets
-            let displacementPx = tx - baseXWater;
-            if (calibrationOffset !== null) {
-              displacementPx = tx - calibrationOffset;
+            const D = parseFloat(prismDistance) || 2500;
+            let referenceX = calibrationOffset !== null ? calibrationOffset : baseXWater;
+            let displacementPx = tx - referenceX - zeroOffset;
+
+            const displacementMm = displacementPx * mmPerPixel;
+            const displacementCm = displacementMm / 10;
+            const deflectionDistance = Math.abs(displacementMm);
+
+            const deviationAngleRad = Math.atan2(deflectionDistance, D);
+            const deviationAngle = deviationAngleRad * (180 / Math.PI);
+
+            const prismAngle = 60;
+            const prismAngleRad = prismAngle * Math.PI / 180;
+            const deviationRad = deviationAngleRad;
+            const n = Math.sin((prismAngleRad + deviationRad) / 2) / Math.sin(prismAngleRad / 2);
+
+            let brix = 0;
+            if (n >= 1.33299) {
+              const a = 0.0000004;
+              const b = 0.00192;
+              const c = 1.33299 - n;
+              brix = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
             }
-            // Apply zero offset (user can reset to current position)
-            displacementPx = displacementPx - zeroOffset;
-            
-            const dx = Math.abs(displacementPx) * mmPerPixel; // displacement in mm
-            const lengthCm = (dx / 10); // convert mm to cm for display
-
-            // Minimum deviation angle: δm = arctan(L/D)
-            const deviationAngle = Math.atan(dx / D) * (180 / Math.PI);
-
-            // Refractive index: n = sin((A + δm)/2) / sin(A/2) where A = 60°
-            const n = Math.sin(((60 + deviationAngle) / 2) * (Math.PI / 180)) / Math.sin(30 * Math.PI / 180);
-
-            // Brix from RI: Brix = (n - 1.3330) / 0.00192 (sucrose at 20°C)
-            let brix = (n - 1.3330) / 0.00192;
             if (brix < 0) brix = 0;
-            if (brix > 100) brix = 100; // Cap at 100%
+            if (brix > 100) brix = 100;
+
+            if (process.env.NODE_ENV === 'development') {
+              console.log({
+                mmPerPixel,
+                displacementPx,
+                displacementMm,
+                deflectionDistance,
+                deviationAngle,
+                refractiveIndex: n,
+                brix
+              });
+            }
 
             setLiveAngle(deviationAngle);
             setLiveRI(n);
-            setLiveLength(lengthCm);
+            setLiveLength(displacementCm);
             setLiveBrix(brix);
-            // Track current laser position for zero button
             currentLaserPos.current = tx;
           }
         }
@@ -855,7 +1079,7 @@ export default function SmartRefractometer() {
       stopped = true;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [setupStep, threshold, prismDistance, mmPerPixel, baseXWater, clickPoints, isLocked]);
+  }, [setupStep, threshold, prismDistance, mmPerPixel, baseXWater, clickPoints, isLocked, zeroOffset, calibrationOffset]);
 
   const toggleLock = () => {
     if (!isLocked) {
@@ -863,6 +1087,9 @@ export default function SmartRefractometer() {
       setSavedAngle(liveAngle);
       setSavedRI(liveRI);
       setSavedLength(liveLength);
+      // Capture measurement snapshot for vision API
+      const snap = captureCanvasSnapshot();
+      if (snap) setMeasurementSnapshot(snap);
     }
     setIsLocked(prev => !prev);
   };
@@ -870,16 +1097,29 @@ export default function SmartRefractometer() {
   const runAnalysis = async () => {
     const brix = isLocked ? savedBrix : liveBrix;
     const angle = isLocked ? savedAngle : liveAngle;
+    const lengthCm = isLocked ? savedLength : liveLength;
+    const refractiveIndex = isLocked ? savedRI : liveRI;
     setLoading(true);
     setApiResponse('');
+    setVerifiedResults(null);
+    setVisionUsed(false);
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ angle, brix })
+        body: JSON.stringify({
+          angle,
+          brix,
+          lengthCm,
+          refractiveIndex,
+          measurementImageBase64: measurementSnapshot || null,
+          calibrationImageBase64: calibrationSnapshot || null
+        })
       });
       const data = await res.json();
       setApiResponse(data.analysis || data.error);
+      if (data.verified) setVerifiedResults(data.verified);
+      if (data.visionUsed !== undefined) setVisionUsed(data.visionUsed);
     } catch (err) {
       setApiResponse(`Connection error: ${err.message}`);
     } finally {
@@ -888,11 +1128,15 @@ export default function SmartRefractometer() {
   };
 
   const zeroDisplacement = () => {
-    // Set current laser position as the new zero reference point
     if (calibrationOffset !== null && currentLaserPos.current !== null) {
       const currentPx = currentLaserPos.current;
-      // The zero offset is the displacement from calibration point
-      setZeroOffset(currentPx - calibrationOffset);
+      const calOffset = calibrationOffset;
+      setZeroOffset(currentPx - calOffset);
+      // Capture calibration/zero snapshot for vision API
+      const snap = captureCanvasSnapshot();
+      if (snap) setCalibrationSnapshot(snap);
+      // Force re-render
+      setZeroPressed(p => !p);
     }
   };
 
@@ -909,6 +1153,10 @@ export default function SmartRefractometer() {
     setCalibrationOffset(null);
     setZeroOffset(0);
     setApiResponse('');
+    setVerifiedResults(null);
+    setVisionUsed(false);
+    setCalibrationSnapshot(null);
+    setMeasurementSnapshot(null);
     setLiveBrix(0.0);
     setLiveAngle(23.6);
   };
@@ -1046,6 +1294,15 @@ export default function SmartRefractometer() {
                   </div>
                 )}
               </div>
+              <button
+                className="rfr-zero-btn"
+                onClick={zeroDisplacement}
+                disabled={calibrationOffset === null}
+                title="Set current position as zero"
+                style={{ width: '100%', marginTop: '10px', marginLeft: 0 }}
+              >
+                Zero
+              </button>
             </section>
 
             <section className="rfr-section">
@@ -1098,23 +1355,25 @@ export default function SmartRefractometer() {
                   <div className="rfr-metric-unit">° Brix</div>
                 </div>
               </div>
-              <div style={{ display: 'flex', marginTop: '20px' }}>
-                <button
-                  className={`rfr-btn-action ${isLocked ? 'release' : 'capture'}`}
-                  onClick={toggleLock}
-                >
-                  {isLocked ? 'Release' : 'Capture Reading'}
-                </button>
-                <button
-                  className="rfr-zero-btn"
-                  onClick={zeroDisplacement}
-                  disabled={calibrationOffset === null}
-                  title="Set current position as zero"
-                >
-                  Zero
-                </button>
-              </div>
+              <button
+                className={`rfr-btn-action ${isLocked ? 'release' : 'capture'}`}
+                onClick={toggleLock}
+                style={{ marginTop: '10px' }}
+              >
+                {isLocked ? 'Release' : 'Capture Reading'}
+              </button>
             </section>
+
+            {process.env.NODE_ENV === 'development' && (
+              <div className="rfr-callout" style={{ marginTop: '16px', fontSize: '0.65rem' }}>
+                <strong>Debug Info:</strong><br />
+                mm/pixel: {mmPerPixel.toFixed(4)}<br />
+                Ref point: {(calibrationOffset !== null ? calibrationOffset : baseXWater).toFixed(1)}px<br />
+                Laser pos: {currentLaserPos.current?.toFixed(1) || 'none'}px<br />
+                Offset: {zeroOffset.toFixed(1)}px<br />
+                D: {prismDistance}mm
+              </div>
+            )}
 
             <section className="rfr-section">
               <label className="rfr-label">Detection sensitivity</label>
@@ -1133,14 +1392,24 @@ export default function SmartRefractometer() {
 
             <section className="rfr-section">
               <label className="rfr-label">Analysis</label>
-              <AnalysisOutput text={apiResponse} loading={loading} />
+              {(calibrationSnapshot || measurementSnapshot) && !apiResponse && !loading && (
+                <div className="rfr-callout" style={{ marginBottom: '14px', fontSize: '0.6rem' }}>
+                  📷 {[calibrationSnapshot && 'Zero frame', measurementSnapshot && 'Measurement frame'].filter(Boolean).join(' + ')} captured — ready for vision analysis
+                </div>
+              )}
+              <AnalysisOutput
+                text={apiResponse}
+                loading={loading}
+                verified={verifiedResults}
+                visionUsed={visionUsed}
+              />
               <button
                 className="rfr-btn-primary"
                 style={{ marginTop: '16px' }}
                 onClick={runAnalysis}
                 disabled={loading}
               >
-                Run Analysis
+                {measurementSnapshot ? 'Run Vision Analysis' : 'Run Analysis'}
               </button>
             </section>
           </>
