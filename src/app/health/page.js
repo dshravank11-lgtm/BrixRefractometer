@@ -470,7 +470,7 @@ export default function HealthPlanner() {
         setPlan('');
 
         try {
-            const res = await fetch('/api/health-plan', {
+            const res = await fetch('/api/analyze/health-plan', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ gender, weight, height, age, activity, goal, ...v }),

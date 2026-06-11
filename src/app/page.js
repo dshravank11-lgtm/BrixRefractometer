@@ -1,6 +1,13 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 
+// Device specs: camera horizontal FOV (approximate) and sensor width
+const DEVICES = {
+  'ipad-10th': { name: 'iPad 10th Gen', fov: 63.8, sensorWidth: 5.76 }, // 1/4" sensor
+  'iphone-15-plus': { name: 'iPhone 15 Plus', fov: 77.5, sensorWidth: 6.73 }, // 1/1.56" sensor
+  'samsung-a54': { name: 'Samsung A54', fov: 85.0, sensorWidth: 6.4 } // 1/1.76" sensor
+};
+
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,300&family=IBM+Plex+Serif:ital,wght@0,300;0,400;1,300&display=swap');
 
@@ -431,6 +438,78 @@ const STYLES = `
     .rfr-section, .rfr-lock-badge, .rfr-spinner { animation: none; }
     .rfr-metric-num, .rfr-rule { transition: none; }
   }
+
+  .rfr-device-select {
+    font-family: 'IBM Plex Mono', monospace;
+    background: #111113;
+    border: 1px solid #2c2c30;
+    border-radius: 0;
+    color: #e8e4dc;
+    padding: 16px 18px;
+    font-size: 0.85rem;
+    font-weight: 300;
+    outline: none;
+    width: 100%;
+    margin-bottom: 16px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+  }
+
+  .rfr-device-select:focus { border-color: #b8955a; }
+
+  .rfr-alt-method {
+    font-size: 0.65rem;
+    color: #9a9790;
+    text-align: center;
+    margin-top: 16px;
+    letter-spacing: 0.1em;
+  }
+
+  .rfr-alt-method button {
+    background: none;
+    border: none;
+    color: #b8955a;
+    cursor: pointer;
+    text-decoration: underline;
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  .rfr-buffer-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #0b0b0c;
+    border: 1px solid #b8955a;
+    color: #b8955a;
+    padding: 20px 40px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    z-index: 10;
+  }
+
+  .rfr-zero-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.575rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    background: transparent;
+    color: #e8e4dc;
+    border: 1px solid #b8955a;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 0;
+    margin-left: 10px;
+  }
+
+  .rfr-zero-btn:hover {
+    background: #b8955a;
+    color: #0b0b0c;
+  }
 `;
 
 
@@ -531,18 +610,29 @@ export default function SmartRefractometer() {
 
   const [setupStep, setSetupStep] = useState('input_distance');
   const [isLocked, setIsLocked] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
 
+  const [selectedDevice, setSelectedDevice] = useState('');
+  const [deviceDistance, setDeviceDistance] = useState('100');
   const [prismDistance, setPrismDistance] = useState('2500');
+  const [useAltMethod, setUseAltMethod] = useState(false);
+
   const [clickPoints, setClickPoints] = useState([]);
   const [mmPerPixel, setMmPerPixel] = useState(0.55);
   const [baseXWater, setBaseXWater] = useState(320);
-
+  const [calibrationOffset, setCalibrationOffset] = useState(null);
+  const [zeroOffset, setZeroOffset] = useState(0);
+  const currentLaserPos = useRef(null);
   const [threshold, setThreshold] = useState(190);
   const [liveAngle, setLiveAngle] = useState(23.6);
   const [liveBrix, setLiveBrix] = useState(0.0);
+  const [liveRI, setLiveRI] = useState(1.333);
+  const [liveLength, setLiveLength] = useState(0.0);
 
   const [savedBrix, setSavedBrix] = useState(0.0);
   const [savedAngle, setSavedAngle] = useState(23.6);
+  const [savedRI, setSavedRI] = useState(1.333);
+  const [savedLength, setSavedLength] = useState(0.0);
 
   const [apiResponse, setApiResponse] = useState('');
   const [loading, setLoading] = useState(false);
@@ -594,8 +684,34 @@ export default function SmartRefractometer() {
       const delta = Math.abs(updated[1] - updated[0]);
       setMmPerPixel(297 / delta);
       setBaseXWater((updated[0] + updated[1]) / 2);
-      setTimeout(() => setSetupStep('active_run'), 700);
+      // Start 1-second buffer before measuring
+      setIsBuffering(true);
+      setTimeout(() => {
+        setIsBuffering(false);
+        setSetupStep('active_run');
+      }, 1000);
     }
+  };
+
+  const startDeviceCalibration = () => {
+    if (!selectedDevice || !deviceDistance || !prismDistance) {
+      alert('Please select a device and enter distances.');
+      return;
+    }
+    // Calculate mmPerPixel from device FOV and sensor width
+    const device = DEVICES[selectedDevice];
+    // At known distance, the visible width in mm = 2 * distance * tan(FOV/2)
+    const visibleWidthMm = 2 * parseFloat(deviceDistance) * Math.tan((device.fov / 2) * Math.PI / 180);
+    // Sensor width / visible width = pixels per mm (then convert to mm per pixel)
+    const pxPerMm = 640 / visibleWidthMm;
+    setMmPerPixel(1000 / pxPerMm);
+    setBaseXWater(320);
+    // Start 1-second buffer before measuring
+    setIsBuffering(true);
+    setTimeout(() => {
+      setIsBuffering(false);
+      setSetupStep('active_run');
+    }, 1000);
   };
 
   useEffect(() => {
@@ -625,13 +741,27 @@ export default function SmartRefractometer() {
           const frame = ctx.getImageData(0, 0, c.width, c.height);
           const d = frame.data;
           let tx = -1, ty = -1, best = 0;
+          // More selective red detection - reduce white noise
+          // Require high red component and high saturation, less strict on value
+          const isRedLaser = (r, g, b) => {
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const redDominance = r - Math.max(g, b);
+            const saturation = max === 0 ? 0 : (max - min) / max;
+            // Red laser: dominant red, high saturation, not too dim
+            return r > 180 && redDominance > 80 && saturation > 0.5 && r > g * 1.5;
+          };
+          // White detection only if it's very bright AND somewhat reddish (laser center)
+          const isWhiteLaser = (r, g, b) => {
+            const avg = (r + g + b) / 3;
+            const rDominant = r > g && r > b;
+            return avg > threshold && avg < 250 && rDominant && r - b > 40;
+          };
+
           for (let i = 0; i < d.length; i += 16) {
             const r = d[i], g = d[i + 1], b = d[i + 2];
-            const [h, s, vv] = rgbToHsv(r, g, b);
-            const isRed = (h < 20 || h > 340) && s > 0.5 && vv > 0.75;
-            const isWhite = r > threshold && g > threshold && b > threshold;
-            if (isRed || isWhite) {
-              const score = r + g + b;
+            if (isRedLaser(r, g, b) || isWhiteLaser(r, g, b)) {
+              const score = r * 2 - g - b; // Favor red, penalize green/blue
               if (score > best) {
                 best = score;
                 tx = (i / 4) % c.width;
@@ -640,6 +770,11 @@ export default function SmartRefractometer() {
             }
           }
           if (tx !== -1) {
+            // Set calibration offset on first detection (only if not already set)
+            if (calibrationOffset === null && !isBuffering) {
+              setCalibrationOffset(tx);
+            }
+
             ctx.strokeStyle = '#b8955a';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
@@ -650,14 +785,64 @@ export default function SmartRefractometer() {
             ctx.fillStyle = '#b8955a';
             ctx.fill();
 
-            const L = parseFloat(prismDistance) || 2500;
-            const dx = Math.abs(tx - baseXWater) * mmPerPixel;
-            const angle = 23.6 + Math.atan(dx / L) * (180 / Math.PI);
-            const n = Math.sin(((60 + angle) / 2) * (Math.PI / 180)) / 0.5;
-            let brix = (n - 1.3333) / 0.00143;
+            // Draw vector arrow from origin (calibration point) to current position
+            const originX = calibrationOffset !== null ? calibrationOffset : baseXWater;
+            if (calibrationOffset !== null && Math.abs(tx - originX) > 2) {
+              const dx = tx - originX;
+              const dy = ty - c.height / 2;
+              const len = Math.sqrt(dx * dx + dy * dy);
+              const ux = dx / len; // unit vector x
+              const uy = dy / len; // unit vector y
+              
+              // Arrow line
+              ctx.strokeStyle = '#b8955a';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(originX, c.height / 2);
+              ctx.lineTo(tx, ty);
+              ctx.stroke();
+              
+              // Arrow head
+              const headLen = 12;
+              ctx.beginPath();
+              ctx.moveTo(tx, ty);
+              ctx.lineTo(tx - headLen * ux + 5 * uy, ty - headLen * uy - 5 * ux);
+              ctx.moveTo(tx, ty);
+              ctx.lineTo(tx - headLen * ux - 5 * uy, ty - headLen * uy + 5 * ux);
+              ctx.stroke();
+            }
+
+            // Corrected calculations for equilateral prism (60°)
+            const D = parseFloat(prismDistance) || 2500; // prism-to-screen distance in mm
+            
+            // Calculate displacement relative to base position, accounting for offsets
+            let displacementPx = tx - baseXWater;
+            if (calibrationOffset !== null) {
+              displacementPx = tx - calibrationOffset;
+            }
+            // Apply zero offset (user can reset to current position)
+            displacementPx = displacementPx - zeroOffset;
+            
+            const dx = Math.abs(displacementPx) * mmPerPixel; // displacement in mm
+            const lengthCm = (dx / 10); // convert mm to cm for display
+
+            // Minimum deviation angle: δm = arctan(L/D)
+            const deviationAngle = Math.atan(dx / D) * (180 / Math.PI);
+
+            // Refractive index: n = sin((A + δm)/2) / sin(A/2) where A = 60°
+            const n = Math.sin(((60 + deviationAngle) / 2) * (Math.PI / 180)) / Math.sin(30 * Math.PI / 180);
+
+            // Brix from RI: Brix = (n - 1.3330) / 0.00192 (sucrose at 20°C)
+            let brix = (n - 1.3330) / 0.00192;
             if (brix < 0) brix = 0;
-            setLiveAngle(angle);
+            if (brix > 100) brix = 100; // Cap at 100%
+
+            setLiveAngle(deviationAngle);
+            setLiveRI(n);
+            setLiveLength(lengthCm);
             setLiveBrix(brix);
+            // Track current laser position for zero button
+            currentLaserPos.current = tx;
           }
         }
       }
@@ -673,7 +858,12 @@ export default function SmartRefractometer() {
   }, [setupStep, threshold, prismDistance, mmPerPixel, baseXWater, clickPoints, isLocked]);
 
   const toggleLock = () => {
-    if (!isLocked) { setSavedBrix(liveBrix); setSavedAngle(liveAngle); }
+    if (!isLocked) {
+      setSavedBrix(liveBrix);
+      setSavedAngle(liveAngle);
+      setSavedRI(liveRI);
+      setSavedLength(liveLength);
+    }
     setIsLocked(prev => !prev);
   };
 
@@ -697,6 +887,15 @@ export default function SmartRefractometer() {
     }
   };
 
+  const zeroDisplacement = () => {
+    // Set current laser position as the new zero reference point
+    if (calibrationOffset !== null && currentLaserPos.current !== null) {
+      const currentPx = currentLaserPos.current;
+      // The zero offset is the displacement from calibration point
+      setZeroOffset(currentPx - calibrationOffset);
+    }
+  };
+
   const reset = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
@@ -706,6 +905,9 @@ export default function SmartRefractometer() {
     setSetupStep('input_distance');
     setClickPoints([]);
     setIsLocked(false);
+    setIsBuffering(false);
+    setCalibrationOffset(null);
+    setZeroOffset(0);
     setApiResponse('');
     setLiveBrix(0.0);
     setLiveAngle(23.6);
@@ -739,7 +941,52 @@ export default function SmartRefractometer() {
           className="rfr-hidden-video"
         />
 
-        {setupStep === 'input_distance' && (
+        {!useAltMethod && setupStep === 'input_distance' && (
+          <section className="rfr-section">
+            <label className="rfr-label">Select your device</label>
+            <select
+              className="rfr-device-select"
+              value={selectedDevice}
+              onChange={e => setSelectedDevice(e.target.value)}
+            >
+              <option value="">— Choose device —</option>
+              {Object.entries(DEVICES).map(([key, dev]) => (
+                <option key={key} value={key}>{dev.name}</option>
+              ))}
+            </select>
+
+            <label className="rfr-label">Device distance from wall (mm)</label>
+            <input
+              type="number"
+              className="rfr-input"
+              value={deviceDistance}
+              onChange={e => setDeviceDistance(e.target.value)}
+              placeholder="100"
+            />
+
+            <label className="rfr-label">Prism-to-screen distance (mm)</label>
+            <input
+              type="number"
+              className="rfr-input"
+              value={prismDistance}
+              onChange={e => setPrismDistance(e.target.value)}
+              placeholder="2500"
+            />
+
+            <button
+              className="rfr-btn-primary"
+              onClick={startDeviceCalibration}
+            >
+              Start Camera
+            </button>
+
+            <div className="rfr-alt-method">
+              Or use <button onClick={() => setUseAltMethod(true)}>A4 paper calibration</button>
+            </div>
+          </section>
+        )}
+
+        {useAltMethod && setupStep === 'input_distance' && (
           <section className="rfr-section">
             <label className="rfr-label">Prism-to-screen distance (mm)</label>
             <input
@@ -758,6 +1005,9 @@ export default function SmartRefractometer() {
             >
               Start Camera
             </button>
+            <div className="rfr-alt-method">
+              Or use <button onClick={() => setUseAltMethod(false)}>device calibration</button>
+            </div>
           </section>
         )}
 
@@ -790,33 +1040,80 @@ export default function SmartRefractometer() {
               <div className="rfr-camera-wrap">
                 <canvas ref={canvasRef} width="640" height="480" />
                 {isLocked && <div className="rfr-lock-badge">Locked</div>}
+                {isBuffering && (
+                  <div className="rfr-buffer-indicator">
+                    Calibrating...
+                  </div>
+                )}
               </div>
             </section>
 
             <section className="rfr-section">
-              <div className="rfr-metrics">
+              <div className="rfr-metrics" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
                 <div className="rfr-metric">
-                  <div className="rfr-label">Live</div>
+                  <div className="rfr-label">Length</div>
+                  <div className={`rfr-metric-num ${isLocked ? 'dim' : 'live'}`}>
+                    {liveLength.toFixed(1)}
+                  </div>
+                  <div className="rfr-metric-unit">cm</div>
+                  <span className="rfr-rule" />
+                </div>
+                <div className="rfr-metric">
+                  <div className="rfr-label">Refractive Index</div>
+                  <div className={`rfr-metric-num ${isLocked ? 'dim' : 'live'}`}>
+                    {liveRI.toFixed(4)}
+                  </div>
+                  <div className="rfr-metric-unit">n</div>
+                  <span className="rfr-rule" />
+                </div>
+                <div className="rfr-metric">
+                  <div className="rfr-label">Brix</div>
                   <div className={`rfr-metric-num ${isLocked ? 'dim' : 'live'}`}>
                     {liveBrix.toFixed(1)}
                   </div>
                   <div className="rfr-metric-unit">° Brix</div>
                   <span className="rfr-rule" />
                 </div>
+              </div>
+              <div className="rfr-metrics" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginTop: '16px' }}>
                 <div className="rfr-metric">
-                  <div className="rfr-label">Snapshot</div>
+                  <div className="rfr-label">Locked</div>
                   <div className={`rfr-metric-num ${isLocked ? 'locked' : 'dim'}`}>
-                    {(isLocked ? savedBrix : liveBrix).toFixed(1)}
+                    {savedLength.toFixed(1)}
+                  </div>
+                  <div className="rfr-metric-unit">cm</div>
+                </div>
+                <div className="rfr-metric">
+                  <div className="rfr-label">Locked</div>
+                  <div className={`rfr-metric-num ${isLocked ? 'locked' : 'dim'}`}>
+                    {savedRI.toFixed(4)}
+                  </div>
+                  <div className="rfr-metric-unit">n</div>
+                </div>
+                <div className="rfr-metric">
+                  <div className="rfr-label">Locked</div>
+                  <div className={`rfr-metric-num ${isLocked ? 'locked' : 'dim'}`}>
+                    {savedBrix.toFixed(1)}
                   </div>
                   <div className="rfr-metric-unit">° Brix</div>
                 </div>
               </div>
-              <button
-                className={`rfr-btn-action ${isLocked ? 'release' : 'capture'}`}
-                onClick={toggleLock}
-              >
-                {isLocked ? 'Release' : 'Capture Reading'}
-              </button>
+              <div style={{ display: 'flex', marginTop: '20px' }}>
+                <button
+                  className={`rfr-btn-action ${isLocked ? 'release' : 'capture'}`}
+                  onClick={toggleLock}
+                >
+                  {isLocked ? 'Release' : 'Capture Reading'}
+                </button>
+                <button
+                  className="rfr-zero-btn"
+                  onClick={zeroDisplacement}
+                  disabled={calibrationOffset === null}
+                  title="Set current position as zero"
+                >
+                  Zero
+                </button>
+              </div>
             </section>
 
             <section className="rfr-section">

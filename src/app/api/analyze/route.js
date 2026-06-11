@@ -13,12 +13,24 @@ export async function POST(request) {
             return NextResponse.json({ error: "API key missing." }, { status: 500 });
         }
 
+
+        const angleRadians = angle * Math.PI / 180;
+
+        const D = 50;
+        const lengthCm = Math.abs(D * Math.tan(angleRadians)).toFixed(2);
+
+        const refractiveIndex = (Math.sin(((60 + angle) / 2) * Math.PI / 180) / Math.sin(30 * Math.PI / 180)).toFixed(4);
+        let brixFromRI = ((parseFloat(refractiveIndex) - 1.3330) / 0.00192);
+        brixFromRI = Math.min(100, Math.max(0, brixFromRI));
+        const derivedBrix = parseFloat(brixFromRI.toFixed(2));
+        const specificGravity = (1 + derivedBrix * 0.004).toFixed(4);
+
         let gradeBadge;
-        if (brix <= 1.0) {
+        if (derivedBrix <= 1.0) {
             gradeBadge = "### 🟢 NUTRI-GRADE A (Excellent, Low Sugar)";
-        } else if (brix <= 5.0) {
+        } else if (derivedBrix <= 5.0) {
             gradeBadge = "### 🟡 NUTRI-GRADE B (Moderate)";
-        } else if (brix <= 10.0) {
+        } else if (derivedBrix <= 10.0) {
             gradeBadge = "### 🟠 NUTRI-GRADE C (High Sugar)";
         } else {
             gradeBadge = "### 🔴 NUTRI-GRADE D (Very High Sugar)";
@@ -31,14 +43,23 @@ Use exactly this format, substituting the bracketed placeholders with calculated
 ${gradeBadge}
 
 ### 📊 Physical Fluid Dynamics
+
 * Refraction Turning Angle: [angle]°
+* Length Displacement: [lengthCm] cm
 * Refractive Index (n): [n = sin((60 + angle)/2 * π/180) / sin(30 * π/180)]
+* Brix (derived from RI): [brixFromRI]%
 * Approximated Specific Gravity: [value]
 
 ### 🧪 Chemical Concentration
+
 * Solute Concentration: [brix]%
 * Estimated Caloric Load: [brix * 3.87 rounded to 1 decimal] kcal per 100 ml
 * Composition Class: [one of: Pure Water | Light Juice | Medium Juice | Nectar | Light Syrup | Heavy Syrup]
+
+### 🗓️ Intake Frequency Guidance
+
+* Maximum Daily Intake: [value] times per day
+* Maximum Weekly Intake: [value] times per week
 
 Rules:
 - All numeric values to 2 decimal places unless specified otherwise.
@@ -60,7 +81,7 @@ Rules:
                         content: `Sample metrics: Refraction Angle = ${angle.toFixed(2)}°, Brix = ${brix.toFixed(2)}%.`
                     }
                 ],
-                temperature: 0.1,
+
                 max_tokens: 600
             })
         });
@@ -78,7 +99,15 @@ Rules:
             .replace(/```/g, '')
             .trim();
 
-        return NextResponse.json({ analysis: polishedAnalysis });
+
+        return NextResponse.json({
+            analysis: polishedAnalysis,
+            metrics: {
+                angle: parseFloat(angle.toFixed(2)),
+                lengthCm: parseFloat(lengthCm),
+                refractiveIndex: parseFloat(refractiveIndex)
+            }
+        });
 
     } catch (error) {
         return NextResponse.json({ error: `Internal Server Pipeline Exception: ${error.message}` }, { status: 500 });

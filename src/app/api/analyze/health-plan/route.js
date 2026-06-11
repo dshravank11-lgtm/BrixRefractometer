@@ -82,7 +82,6 @@ Rules:
                         content: `Client profile: ${gender}, ${age} years old, ${weight} kg, ${height} cm tall. Activity level: ${activity}. Primary goal: ${goal}.`
                     }
                 ],
-                temperature: 0.2,
                 max_tokens: 900
             })
         });
@@ -91,8 +90,13 @@ Rules:
             const errorData = await response.text();
             return NextResponse.json({ error: `DeepSeek Gateway Error: ${errorData}` }, { status: response.status });
         }
-
-        const data = await response.json();
+        const rawResponse = await response.text();
+        let data;
+        try {
+            data = JSON.parse(rawResponse);
+        } catch (e) {
+            return NextResponse.json({ error: `DeepSeek returned invalid JSON: ${rawResponse}` }, { status: 500 });
+        }
         const rawText = data.choices[0].message.content;
 
         const plan = rawText
