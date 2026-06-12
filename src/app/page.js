@@ -698,8 +698,8 @@ function AnalysisOutput({ text, loading, verified, visionUsed }) {
     const line = raw.trim();
     if (!line) continue;
 
-    // Skip the VERIFIED MEASUREMENTS section from the text output
-    // since we render it separately with large styling
+    
+    
     if (/VERIFIED MEASUREMENTS/i.test(line)) {
       skipVerifiedSection = true;
       continue;
@@ -801,9 +801,9 @@ export default function SmartRefractometer() {
   const [savedRI, setSavedRI] = useState(1.333);
   const [savedLength, setSavedLength] = useState(0.0);
 
-  // Snapshots for vision API
-  const [calibrationSnapshot, setCalibrationSnapshot] = useState(null); // taken on zero
-  const [measurementSnapshot, setMeasurementSnapshot] = useState(null); // taken on capture
+  
+  const [calibrationSnapshot, setCalibrationSnapshot] = useState(null); 
+  const [measurementSnapshot, setMeasurementSnapshot] = useState(null); 
 
   const [apiResponse, setApiResponse] = useState('');
   const [verifiedResults, setVerifiedResults] = useState(null);
@@ -822,7 +822,7 @@ export default function SmartRefractometer() {
       const ctx = offscreen.getContext('2d');
       ctx.drawImage(canvas, 0, 0, 320, 240);
       const dataUrl = offscreen.toDataURL('image/jpeg', 0.7);
-      // Strip the "data:image/jpeg;base64," prefix
+      
       return dataUrl.split(',')[1];
     } catch {
       return null;
@@ -982,7 +982,7 @@ export default function SmartRefractometer() {
             }
           }
           if (tx !== -1) {
-            // Set calibration offset on first detection
+            
             if (calibrationOffset === null && !isBuffering) {
               setCalibrationOffset(tx);
             }
@@ -997,7 +997,7 @@ export default function SmartRefractometer() {
             ctx.fillStyle = '#b8955a';
             ctx.fill();
 
-            // Use baseXWater during buffering, calibrationOffset after
+            
             const originX = calibrationOffset !== null ? calibrationOffset : baseXWater;
             const zeroRefX = originX + zeroOffset;
 
@@ -1029,16 +1029,24 @@ export default function SmartRefractometer() {
             let displacementPx = tx - referenceX - zeroOffset;
 
             const displacementMm = displacementPx * mmPerPixel;
-            const displacementCm = displacementMm / 10;
             const deflectionDistance = Math.abs(displacementMm);
 
+            
+            
             const deviationAngleRad = Math.atan2(deflectionDistance, D);
             const deviationAngle = deviationAngleRad * (180 / Math.PI);
 
             const prismAngle = 60;
             const prismAngleRad = prismAngle * Math.PI / 180;
-            const deviationRad = deviationAngleRad;
-            const n = Math.sin((prismAngleRad + deviationRad) / 2) / Math.sin(prismAngleRad / 2);
+            
+            
+            
+            const n = Math.sin((prismAngleRad + deviationAngleRad) / 2) / Math.sin(prismAngleRad / 2);
+
+            
+            
+            const totalPathMm = Math.sqrt(D * D + deflectionDistance * deflectionDistance);
+            const totalPathCm = totalPathMm / 10;
 
             let brix = 0;
             if (n >= 1.33299) {
@@ -1058,13 +1066,14 @@ export default function SmartRefractometer() {
                 deflectionDistance,
                 deviationAngle,
                 refractiveIndex: n,
-                brix
+                brix,
+                totalPathCm
               });
             }
 
             setLiveAngle(deviationAngle);
             setLiveRI(n);
-            setLiveLength(displacementCm);
+            setLiveLength(totalPathCm);
             setLiveBrix(brix);
             currentLaserPos.current = tx;
           }
@@ -1087,7 +1096,7 @@ export default function SmartRefractometer() {
       setSavedAngle(liveAngle);
       setSavedRI(liveRI);
       setSavedLength(liveLength);
-      // Capture measurement snapshot for vision API
+      
       const snap = captureCanvasSnapshot();
       if (snap) setMeasurementSnapshot(snap);
     }
@@ -1132,10 +1141,10 @@ export default function SmartRefractometer() {
       const currentPx = currentLaserPos.current;
       const calOffset = calibrationOffset;
       setZeroOffset(currentPx - calOffset);
-      // Capture calibration/zero snapshot for vision API
+      
       const snap = captureCanvasSnapshot();
       if (snap) setCalibrationSnapshot(snap);
-      // Force re-render
+      
       setZeroPressed(p => !p);
     }
   };
