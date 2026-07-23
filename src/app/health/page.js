@@ -610,7 +610,7 @@ export default function HealthPlanner() {
                     </>
                 )}
 
-                {/* ── Results ── */}
+                {}
                 {submitted && (
                     <>
                         <section className="hp-section">

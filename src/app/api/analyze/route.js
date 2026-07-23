@@ -2,10 +2,15 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request) {
     try {
-        const { angle, brix } = await request.json();
+        const {
+            angle,
+            brix,
+            lengthCm,
+            refractiveIndex
+        } = await request.json();
 
         if (angle === undefined || brix === undefined) {
-            return NextResponse.json({ error: "Missing required calibration dataset values." }, { status: 400 });
+            return NextResponse.json({ error: "Missing required measurement values." }, { status: 400 });
         }
 
         const apiKey = process.env.DEEPSEEK_API_KEY;
@@ -14,57 +19,74 @@ export async function POST(request) {
         }
 
 
-        const angleRadians = angle * Math.PI / 180;
 
-        const D = 50;
-        const lengthCm = Math.abs(D * Math.tan(angleRadians)).toFixed(2);
 
-        const refractiveIndex = (Math.sin(((60 + angle) / 2) * Math.PI / 180) / Math.sin(30 * Math.PI / 180)).toFixed(4);
-        let brixFromRI = ((parseFloat(refractiveIndex) - 1.3330) / 0.00192);
-        brixFromRI = Math.min(100, Math.max(0, brixFromRI));
-        const derivedBrix = parseFloat(brixFromRI.toFixed(2));
-        const specificGravity = (1 + derivedBrix * 0.004).toFixed(4);
 
-        let gradeBadge;
-        if (derivedBrix <= 1.0) {
-            gradeBadge = "### 🟢 NUTRI-GRADE A (Excellent, Low Sugar)";
-        } else if (derivedBrix <= 5.0) {
-            gradeBadge = "### 🟡 NUTRI-GRADE B (Moderate)";
-        } else if (derivedBrix <= 10.0) {
-            gradeBadge = "### 🟠 NUTRI-GRADE C (High Sugar)";
-        } else {
-            gradeBadge = "### 🔴 NUTRI-GRADE D (Very High Sugar)";
-        }
 
-        const systemPrompt = `You are a precision laboratory analyzer. Return ONLY the structured report below — no preamble, no closing remarks, no markdown code fences.
 
-Use exactly this format, substituting the bracketed placeholders with calculated values:
 
-${gradeBadge}
 
-### 📊 Physical Fluid Dynamics
 
-* Refraction Turning Angle: [angle]°
-* Length Displacement: [lengthCm] cm
-* Refractive Index (n): [n = sin((60 + angle)/2 * π/180) / sin(30 * π/180)]
-* Brix (derived from RI): [brixFromRI]%
-* Approximated Specific Gravity: [value]
 
-### 🧪 Chemical Concentration
 
-* Solute Concentration: [brix]%
-* Estimated Caloric Load: [brix * 3.87 rounded to 1 decimal] kcal per 100 ml
-* Composition Class: [one of: Pure Water | Light Juice | Medium Juice | Nectar | Light Syrup | Heavy Syrup]
 
-### 🗓️ Intake Frequency Guidance
 
-* Maximum Daily Intake: [value] times per day
-* Maximum Weekly Intake: [value] times per week
+
+
+        const systemPrompt = `You are a world-class analytical chemist and optical physicist acting as a verification engine for a DIY laser Brix refractometer.
+
+PROJECT CONTEXT:
+- The device is a DIY Brix refractometer using a laser and a 60° glass equilateral prism.
+- A laser beam passes through a liquid sample placed against the prism. The emergent beam is deviated by an angle θ_d due to refraction by the liquid.
+- The deviated laser dot lands on a projection screen, tracked by a smartphone camera.
+- Displacement (in pixels) is converted to mm using the device's calibrated mm/pixel ratio.
+- Angle of deviation: tan(θ_d) = displacement_mm / prism_to_screen_distance_mm
+- Refractive index: n = sin((60° + θ_d) / 2) / sin(30°), via Snell's law at minimum deviation
+- Brix estimation: n ≈ 1.33299 + 0.00192·Bx + 0.0000004·Bx²  (quadratic calibration)
+- Pure water has n ≈ 1.3330 and 0 °Bx. Liquids measured are typically aqueous solutions.
+- Possible error sources: camera parallax, pixel threshold sensitivity, prism alignment, screen flatness.
+
+IMPORTANT: The provided measurements are RAW and UNVERIFIED. They may contain significant errors.
+Cross-check with physics and known liquid databases, and OUTPUT VERIFIED VALUES with your best scientific judgment.
+
+Your response must follow EXACTLY this format — no preamble, no code fences:
+
+### VERIFIED MEASUREMENTS
+* Verified Length: [value] cm
+* Verified Refractive Index: [value]
+* Verified Brix: [value] °Bx
+
+### 🏅 NUTRI-GRADE STATUS: [A/B/C/D] — GRADE [A/B/C/D]
+
+### 🧪 Identified Liquid
+* [Specific liquid or beverage name]
+
+### 📊 Confidence
+* [High / Medium / Low] — [one-line reasoning]
+
+### 🥤 Composition
+* Key components and estimated breakdown
+
+### 💡 Notes
+* One-liner practical takeaway or nutritional note
+
+### ⚠️ Measurement Verification Notes
+* [Brief explanation of why raw values were accepted or corrected, referencing physics/optics]
 
 Rules:
-- All numeric values to 2 decimal places unless specified otherwise.
-- Specific Gravity ≈ 1 + (brix * 0.004) as a working approximation.
-- Do not add any text outside the four sections above.`;
+- NUTRI-GRADE uses Singapore's sugar grading: A (≤1g/100ml), B (>1–5g/100ml), C (>5–10g/100ml), D (>10g/100ml). Base grade on VERIFIED Brix (1 °Bx ≈ 1g sugar/100ml).
+- Refractive index for aqueous liquids must be ≥ 1.3330. If reported n < 1.3330, flag and correct it.
+- Be specific — pick the single most likely liquid.
+- Keep each section short and precise.`;
+
+
+        const userTextContent = `Raw optical measurements from DIY laser refractometer:
+- Refraction Angle (θ_d): ${angle.toFixed(4)}°
+- Displacement (Length): ${lengthCm !== undefined && lengthCm !== null ? lengthCm.toFixed(4) + ' cm' : 'N/A'}
+- Raw Refractive Index (n): ${refractiveIndex !== undefined && refractiveIndex !== null ? refractiveIndex.toFixed(6) : 'N/A'}
+- Raw Brix: ${brix.toFixed(4)} °Bx
+
+Please verify these measurements and determine the liquid based on the physics and optics principles provided.`;
 
         const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
             method: "POST",
@@ -76,13 +98,9 @@ Rules:
                 model: "deepseek-chat",
                 messages: [
                     { role: "system", content: systemPrompt },
-                    {
-                        role: "user",
-                        content: `Sample metrics: Refraction Angle = ${angle.toFixed(2)}°, Brix = ${brix.toFixed(2)}%.`
-                    }
+                    { role: "user", content: userTextContent }
                 ],
-
-                max_tokens: 600
+                max_tokens: 1200
             })
         });
 
@@ -93,23 +111,44 @@ Rules:
 
         const data = await response.json();
         const rawText = data.choices[0].message.content;
-
-        const polishedAnalysis = rawText
-            .replace(/```[a-z]*/gi, '')
-            .replace(/```/g, '')
-            .trim();
-
+        const polished = rawText.replace(/```[a-z]*/gi, '').replace(/```/g, '').trim();
+        const parsed = parseAnalysisText(polished);
 
         return NextResponse.json({
-            analysis: polishedAnalysis,
+            analysis: parsed.fullText,
+            verified: parsed.verified,
+            visionUsed: false,
             metrics: {
-                angle: parseFloat(angle.toFixed(2)),
-                lengthCm: parseFloat(lengthCm),
-                refractiveIndex: parseFloat(refractiveIndex)
+                angle: parseFloat(angle.toFixed(4)),
+                lengthCm: lengthCm != null ? parseFloat(lengthCm) : null,
+                refractiveIndex: refractiveIndex != null ? parseFloat(refractiveIndex) : null
             }
         });
 
     } catch (error) {
         return NextResponse.json({ error: `Internal Server Pipeline Exception: ${error.message}` }, { status: 500 });
     }
+}
+
+
+function parseAnalysisText(text) {
+    const verified = {
+        length: null,
+        refractiveIndex: null,
+        brix: null
+    };
+
+
+    const lenMatch = text.match(/Verified\s+Length\s*:\s*([\d.]+)/i);
+    if (lenMatch) verified.length = parseFloat(lenMatch[1]);
+
+
+    const riMatch = text.match(/Verified\s+Refractive\s+Index\s*:\s*([\d.]+)/i);
+    if (riMatch) verified.refractiveIndex = parseFloat(riMatch[1]);
+
+
+    const brixMatch = text.match(/Verified\s+Brix\s*:\s*([\d.]+)/i);
+    if (brixMatch) verified.brix = parseFloat(brixMatch[1]);
+
+    return { verified, fullText: text };
 }
