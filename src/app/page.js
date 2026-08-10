@@ -215,6 +215,16 @@ export default function SmartRefractometer() {
   useEffect(() => {
     if (setupStep === 'input_distance') return;
     if (!streamRef.current) return;
+    const v = videoRef.current;
+    if (v && v.srcObject !== streamRef.current) {
+      v.srcObject = streamRef.current;
+      v.play().catch(() => {});
+    }
+  }, [setupStep]);
+
+  useEffect(() => {
+    if (setupStep === 'input_distance') return;
+    if (!streamRef.current) return;
 
     let stopped = false;
     const loop = () => {
@@ -501,9 +511,9 @@ export default function SmartRefractometer() {
             <div className="title-bar"><span>Calibration</span><span>Click edges</span></div>
             <div className="panel-content">
               <div className="result-pill">Click the left and right edges of the A4 sheet's longer side. The paper should be in landscape orientation</div>
-              <div className="panel-inset camera-panel">
+              <div className="panel-inset camera-panel" style={{ position: 'relative' }}>
                 <canvas ref={canvasRef} width="640" height="480" onClick={handleCanvasClick} />
-                <video ref={videoRef} autoPlay playsInline muted style={{ display: 'none' }} />
+                <video ref={videoRef} autoPlay playsInline muted style={{ position: 'absolute', visibility: 'hidden', width: 0, height: 0 }} />
               </div>
               <div className="hit-counter-row">
                 <div className="result-pill">Points: {clickPoints.length} / 2</div>
@@ -516,9 +526,9 @@ export default function SmartRefractometer() {
           <section className="stats-window panel-outset">
             <div className="title-bar"><span>Tracker</span><span>{isLocked ? 'Locked' : 'Tracking'}</span></div>
             <div className="panel-content">
-              <div className="panel-inset camera-panel">
+              <div className="panel-inset camera-panel" style={{ position: 'relative' }}>
                 <canvas ref={canvasRef} width="640" height="480" />
-                <video ref={videoRef} autoPlay playsInline muted style={{ display: 'none' }} />
+                <video ref={videoRef} autoPlay playsInline muted style={{ position: 'absolute', visibility: 'hidden', width: 0, height: 0 }} />
               </div>
               <div className="hit-counter-row">
                 <button className="retro-btn" onClick={zeroDisplacement} disabled={calibrationOffset === null}>Zero</button>
