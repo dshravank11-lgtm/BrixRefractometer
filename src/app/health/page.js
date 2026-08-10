@@ -14,14 +14,14 @@ function PlanOutput({ text, loading }) {
   if (loading) {
     return (
       <div className="panel-inset">
-        <div className="result-pill">Generating nutrition plan...</div>
+        <div className="result-pill">Creating plan...</div>
       </div>
     );
   }
   if (!text) {
     return (
       <div className="panel-inset">
-        <div className="result-pill">Fill in your details and generate your plan.</div>
+        <div className="result-pill">Fill in your details and generate your plan</div>
       </div>
     );
   }
@@ -120,16 +120,12 @@ export default function HealthPlanner() {
         <section className="hero-window panel-outset">
           <div className="title-bar"><span>Health Planner</span><span>Personal metrics</span></div>
           <div className="panel-content">
-            <div className="hero-headline">Build your wellness plan</div>
-            <p className="hero-copy">Calculate BMI and TDEE, then get a daily plan tailored to your goals.</p>
-            <Marquee gradient={false} speed={46} pauseOnHover>
-              <span className="hero-copy">Personalized nutrition guidance and daily planning</span>
-            </Marquee>
+            <p className="hero-copy">Get a daily plan based on your goals.</p>
           </div>
         </section>
 
         <section className="form-window panel-outset">
-          <div className="title-bar"><span>Input</span><span>Track your body</span></div>
+          <div className="title-bar"><span>Input</span><span></span></div>
           <div className="panel-content">
             <div className="form-row">
               <div className="form-field">
@@ -153,17 +149,17 @@ export default function HealthPlanner() {
             <div className="form-row">
               <div className="form-field">
                 <label className="form-label">Age (years)</label>
-                <input className="retro-input" type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="28" />
+                <input className="retro-input" type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="67" />
               </div>
               <div className="form-field">
                 <label className="form-label">Weight (kg)</label>
-                <input className="retro-input" type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="70" />
+                <input className="retro-input" type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="67" />
               </div>
             </div>
             <div className="form-row">
               <div className="form-field">
                 <label className="form-label">Height (cm)</label>
-                <input className="retro-input" type="number" value={height} onChange={(e) => setHeight(e.target.value)} placeholder="170" />
+                <input className="retro-input" type="number" value={height} onChange={(e) => setHeight(e.target.value)} placeholder="167" />
               </div>
               <div className="form-field">
                 <label className="form-label">Goal</label>
@@ -197,19 +193,7 @@ export default function HealthPlanner() {
           </section>
         )}
 
-        <section className="feature-window panel-outset bg-construction">
-          <div className="title-bar"><span>Decorative Grid</span><span>Color burst</span></div>
-          <div className="panel-content">
-            <div className="color-grid">
-              <div className="color-square red" />
-              <div className="color-square green" />
-              <div className="color-square blue" />
-              <div className="color-square yellow" />
-              <div className="color-square magenta" />
-              <div className="color-square cyan" />
-            </div>
-          </div>
-        </section>
+
 
         <section className="cta-window panel-outset">
           <div className="title-bar"><span>Navigation</span><span>Switch tools</span></div>
