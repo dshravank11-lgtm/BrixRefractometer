@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request) {
     try {
         const {
@@ -18,122 +20,63 @@ export async function POST(request) {
             return NextResponse.json({ error: "API key missing." }, { status: 500 });
         }
 
-        const systemPrompt = `You are a world-class analytical chemist and optical physicist acting as a verification engine for a DIY laser Brix refractometer.
+        const model = process.env.DEEPSEEK_MODEL || "deepseek-chat";
 
-<<<<<<< HEAD
+        const systemPrompt = [
+            'You are a world-class analytical chemist and optical physicist acting as a verification engine for a DIY laser Brix refractometer.',
+            '',
+            'PROJECT CONTEXT:',
+            '- The device is a DIY Brix refractometer using a laser and a 60\u00B0 glass equilateral prism.',
+            '- A laser beam passes through a liquid sample placed against the prism. The emergent beam is deviated by an angle \u03B8_d due to refraction by the liquid.',
+            '- The deviated laser dot lands on a projection screen, tracked by a smartphone camera.',
+            '- Displacement (in pixels) is converted to mm using the device\'s calibrated mm/pixel ratio.',
+            '- Angle of deviation: tan(\u03B8_d) = displacement_mm / prism_to_screen_distance_mm',
+            '- Refractive index: n = sin((60\u00B0 + \u03B8_d) / 2) / sin(30\u00B0), via Snell\'s law at minimum deviation',
+            '- Brix estimation: n \u2248 1.33299 + 0.00192\u00B7Bx + 0.0000004\u00B7Bx\u00B2  (quadratic calibration)',
+            '- Pure water has n \u2248 1.3330 and 0 \u00B0Bx. Liquids measured are typically aqueous solutions.',
+            '- Possible error sources: camera parallax, pixel threshold sensitivity, prism alignment, screen flatness.',
+            '',
+            'IMPORTANT: The provided measurements are RAW and UNVERIFIED. They may contain significant errors.',
+            'Cross-check with physics and known liquid databases, and OUTPUT VERIFIED VALUES with your best scientific judgment.',
+            '',
+            'Your response must follow EXACTLY this format \u2014 no preamble, no code fences:',
+            '',
+            '### VERIFIED MEASUREMENTS',
+            '* Verified Length: [value] cm',
+            '* Verified Refractive Index: [value]',
+            '* Verified Brix: [value] \u00B0Bx',
+            '',
+            '### \uD83C\uDFC5 NUTRI-GRADE STATUS: [A/B/C/D] \u2014 GRADE [A/B/C/D]',
+            '',
+            '### \uD83E\uDDEA Identified Liquid',
+            '* [Specific liquid or beverage name]',
+            '',
+            '### \uD83D\uDCCA Confidence',
+            '* [High / Medium / Low] \u2014 [one-line reasoning]',
+            '',
+            '### \uD83E\uDD64 Composition',
+            '* Key components and estimated breakdown',
+            '',
+            '### \uD83D\uDCA1 Notes',
+            '* One-liner practical takeaway or nutritional note',
+            '',
+            '### \u26A0\uFE0F Measurement Verification Notes',
+            '* [Brief explanation of why raw values were accepted or corrected, referencing physics/optics]',
+            '',
+            'Rules:',
+            '- NUTRI-GRADE uses Singapore\'s sugar grading: A (\u22641g/100ml), B (>1\u20135g/100ml), C (>5\u201310g/100ml), D (>10g/100ml). Base grade on VERIFIED Brix (1 \u00B0Bx \u2248 1g sugar/100ml).',
+            '- Refractive index for aqueous liquids must be \u2265 1.3330. If reported n < 1.3330, flag and correct it.',
+            '- Be specific \u2014 pick the single most likely liquid.',
+            '- Keep each section short and precise.'
+        ].join('\n');
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-        const systemPrompt = `You are a world-class analytical chemist and optical physicist acting as a verification engine for a DIY laser Brix refractometer.
-
-PROJECT CONTEXT:
-- The device is a DIY Brix refractometer using a laser and a 60° glass equilateral prism.
-- A laser beam passes through a liquid sample placed against the prism. The emergent beam is deviated by an angle θ_d due to refraction by the liquid.
-- The deviated laser dot lands on a projection screen, tracked by a smartphone camera.
-- Displacement (in pixels) is converted to mm using the device's calibrated mm/pixel ratio.
-- Angle of deviation: tan(θ_d) = displacement_mm / prism_to_screen_distance_mm
-- Refractive index: n = sin((60° + θ_d) / 2) / sin(30°), via Snell's law at minimum deviation
-- Brix estimation: n ≈ 1.33299 + 0.00192·Bx + 0.0000004·Bx²  (quadratic calibration)
-- Pure water has n ≈ 1.3330 and 0 °Bx. Liquids measured are typically aqueous solutions.
-- Possible error sources: camera parallax, pixel threshold sensitivity, prism alignment, screen flatness.
-
-IMPORTANT: The provided measurements are RAW and UNVERIFIED. They may contain significant errors.
-Cross-check with physics and known liquid databases, and OUTPUT VERIFIED VALUES with your best scientific judgment.
-
-Your response must follow EXACTLY this format — no preamble, no code fences:
-
-### VERIFIED MEASUREMENTS
-* Verified Length: [value] cm
-* Verified Refractive Index: [value]
-* Verified Brix: [value] °Bx
-
-### 🏅 NUTRI-GRADE STATUS: [A/B/C/D] — GRADE [A/B/C/D]
-
-### 🧪 Identified Liquid
-* [Specific liquid or beverage name]
-
-### 📊 Confidence
-* [High / Medium / Low] — [one-line reasoning]
-
-### 🥤 Composition
-* Key components and estimated breakdown
-
-### 💡 Notes
-* One-liner practical takeaway or nutritional note
-
-=======
-PROJECT CONTEXT:
-- The device is a DIY Brix refractometer using a laser and a 60° glass equilateral prism.
-- A laser beam passes through a liquid sample placed against the prism. The emergent beam is deviated by an angle θ_d due to refraction by the liquid.
-- The deviated laser dot lands on a projection screen, tracked by a smartphone camera.
-- Displacement (in pixels) is converted to mm using the device's calibrated mm/pixel ratio.
-- Angle of deviation: tan(θ_d) = displacement_mm / prism_to_screen_distance_mm
-- Refractive index: n = sin((60° + θ_d) / 2) / sin(30°), via Snell's law at minimum deviation
-- Brix estimation: n ≈ 1.33299 + 0.00192·Bx + 0.0000004·Bx²  (quadratic calibration)
-- Pure water has n ≈ 1.3330 and 0 °Bx. Liquids measured are typically aqueous solutions.
-- Possible error sources: camera parallax, pixel threshold sensitivity, prism alignment, screen flatness.
-
-IMPORTANT: The provided measurements are RAW and UNVERIFIED. They may contain significant errors.
-You must examine the camera image(s) provided (if any), cross-check with physics and known liquid databases, and OUTPUT VERIFIED VALUES with your best scientific judgment.
-
-Your response must follow EXACTLY this format — no preamble, no code fences:
-
-### VERIFIED MEASUREMENTS
-* Verified Length: [value] cm
-* Verified Refractive Index: [value]
-* Verified Brix: [value] °Bx
-
-### 🏅 NUTRI-GRADE STATUS: [A/B/C/D] — GRADE [A/B/C/D]
-
-### 🧪 Identified Liquid
-* [Specific liquid or beverage name]
-
-### 📊 Confidence
-* [High / Medium / Low] — [one-line reasoning]
-
-### 🥤 Composition
-* Key components and estimated breakdown
-
-### 💡 Notes
-* One-liner practical takeaway or nutritional note
-
->>>>>>> 7c4d534cf5fe44c539cdbcc286fffae5d565b635
-### ⚠️ Measurement Verification Notes
-* [Brief explanation of why raw values were accepted or corrected, referencing physics/optics]
-
-Rules:
-- NUTRI-GRADE uses Singapore's sugar grading: A (≤1g/100ml), B (>1–5g/100ml), C (>5–10g/100ml), D (>10g/100ml). Base grade on VERIFIED Brix (1 °Bx ≈ 1g sugar/100ml).
-- Refractive index for aqueous liquids must be ≥ 1.3330. If reported n < 1.3330, flag and correct it.
-- Be specific — pick the single most likely liquid.
-- Keep each section short and precise.`;
-
-
-        const userTextContent = `Raw optical measurements from DIY laser refractometer:
-- Refraction Angle (θ_d): ${angle.toFixed(4)}°
-- Displacement (Length): ${lengthCm !== undefined && lengthCm !== null ? lengthCm.toFixed(4) + ' cm' : 'N/A'}
-- Raw Refractive Index (n): ${refractiveIndex !== undefined && refractiveIndex !== null ? refractiveIndex.toFixed(6) : 'N/A'}
-- Raw Brix: ${brix.toFixed(4)} °Bx
-
-<<<<<<< HEAD
-Please verify these measurements and determine the liquid based on the physics and optics principles provided.`;
-=======
-Please verify these measurements and determine the liquid. Use the images below to corroborate or correct the raw readings.`;
-
-        const userContentParts = [
-            { type: "text", text: userTextContent }
-        ];
->>>>>>> 7c4d534cf5fe44c539cdbcc286fffae5d565b635
+        const userTextContent = 'Raw optical measurements from DIY laser refractometer:\n' +
+            '- Refraction Angle (\u03B8_d): ' + angle.toFixed(4) + '\u00B0\n' +
+            '- Displacement (Length): ' + (lengthCm !== undefined && lengthCm !== null ? lengthCm.toFixed(4) + ' cm' : 'N/A') + '\n' +
+            '- Raw Refractive Index (n): ' + (refractiveIndex !== undefined && refractiveIndex !== null ? refractiveIndex.toFixed(6) : 'N/A') + '\n' +
+            '- Raw Brix: ' + brix.toFixed(4) + ' \u00B0Bx\n' +
+            '\n' +
+            'Please verify these measurements and determine the liquid based on the physics and optics principles provided.';
 
         const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
             method: "POST",
@@ -142,14 +85,10 @@ Please verify these measurements and determine the liquid. Use the images below 
                 "Authorization": `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: "deepseek-v4-flash",
+                model,
                 messages: [
                     { role: "system", content: systemPrompt },
-<<<<<<< HEAD
                     { role: "user", content: userTextContent }
-=======
-                    { role: "user", content: userContentParts }
->>>>>>> 7c4d534cf5fe44c539cdbcc286fffae5d565b635
                 ],
                 max_tokens: 1200
             })
@@ -161,6 +100,11 @@ Please verify these measurements and determine the liquid. Use the images below 
         }
 
         const data = await response.json();
+
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            return NextResponse.json({ error: 'Unexpected response format from DeepSeek API.' }, { status: 500 });
+        }
+
         const rawText = data.choices[0].message.content;
         const polished = rawText.replace(/```[a-z]*/gi, '').replace(/```/g, '').trim();
         const parsed = parseAnalysisText(polished);
@@ -168,7 +112,6 @@ Please verify these measurements and determine the liquid. Use the images below 
         return NextResponse.json({
             analysis: parsed.fullText,
             verified: parsed.verified,
-            visionUsed: false,
             metrics: {
                 angle: parseFloat(angle.toFixed(4)),
                 lengthCm: lengthCm != null ? parseFloat(lengthCm) : null,
@@ -181,7 +124,6 @@ Please verify these measurements and determine the liquid. Use the images below 
     }
 }
 
-
 function parseAnalysisText(text) {
     const verified = {
         length: null,
@@ -189,21 +131,14 @@ function parseAnalysisText(text) {
         brix: null
     };
 
-
     const lenMatch = text.match(/Verified\s+Length\s*:\s*([\d.]+)/i);
     if (lenMatch) verified.length = parseFloat(lenMatch[1]);
 
-
     const riMatch = text.match(/Verified\s+Refractive\s+Index\s*:\s*([\d.]+)/i);
     if (riMatch) verified.refractiveIndex = parseFloat(riMatch[1]);
-
 
     const brixMatch = text.match(/Verified\s+Brix\s*:\s*([\d.]+)/i);
     if (brixMatch) verified.brix = parseFloat(brixMatch[1]);
 
     return { verified, fullText: text };
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 7c4d534cf5fe44c539cdbcc286fffae5d565b635
