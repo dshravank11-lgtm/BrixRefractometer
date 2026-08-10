@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request) {
     try {
         const { gender, weight, height, age, activity, goal, bmi, bmiLabel, bmr, tdee } = await request.json();
@@ -13,16 +15,18 @@ export async function POST(request) {
             return NextResponse.json({ error: "Server Configuration Error: API key is missing." }, { status: 500 });
         }
 
+        const safeTdee = (tdee != null && !isNaN(tdee)) ? tdee : 2000;
+
         let calorieTarget;
         let calorieNote;
         if (goal === 'Lose weight') {
-            calorieTarget = Math.round(tdee - 500);
-            calorieNote = `${calorieTarget} kcal/day (500 kcal deficit from TDEE of ${tdee})`;
+            calorieTarget = Math.round(safeTdee - 500);
+            calorieNote = `${calorieTarget} kcal/day (500 kcal deficit from TDEE of ${safeTdee})`;
         } else if (goal === 'Build muscle') {
-            calorieTarget = Math.round(tdee + 300);
-            calorieNote = `${calorieTarget} kcal/day (300 kcal surplus from TDEE of ${tdee})`;
+            calorieTarget = Math.round(safeTdee + 300);
+            calorieNote = `${calorieTarget} kcal/day (300 kcal surplus from TDEE of ${safeTdee})`;
         } else {
-            calorieTarget = tdee;
+            calorieTarget = safeTdee;
             calorieNote = `${calorieTarget} kcal/day (maintenance)`;
         }
 
@@ -90,13 +94,13 @@ Rules:
             const errorData = await response.text();
             return NextResponse.json({ error: `DeepSeek Gateway Error: ${errorData}` }, { status: response.status });
         }
-        const rawResponse = await response.text();
-        let data;
-        try {
-            data = JSON.parse(rawResponse);
-        } catch (e) {
-            return NextResponse.json({ error: `DeepSeek returned invalid JSON: ${rawResponse}` }, { status: 500 });
+
+        const data = await response.json();
+
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            return NextResponse.json({ error: 'Unexpected response format from DeepSeek API.' }, { status: 500 });
         }
+
         const rawText = data.choices[0].message.content;
 
         const plan = rawText
