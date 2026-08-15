@@ -38,3 +38,28 @@ Each camera frame is scanned pixel by pixel. Pixels matching the laser color  ar
 - **Nutri-Grade** labeling based on Singapore sugar grading system
 - **Health Planner** generates a personalized daily nutrition plan
 - **Instractions** instructions on how to
+
+## Instructions
+
+- **Step 1**
+Prism
+First, you will need a prism that can hold liquid samples
+Prism making instructions:
+https://www.instructables.com/Optical-Water-Prism 
+
+- **Step 2**
+Platform
+After making your prism, you will need a rotating platform, where you can place the prism on
+
+- **Step 3**
+Laser
+You will need to shine a laser through the prism and observe how its position changes as you rotate the prism
+
+As you rotate it, the laser spot will move along the wall until it stops.
+
+This happens due to the concept of total internal reflection and using the formula above, you can determine the refractive index of the liquid sample.
+
+- **Note**
+Important
+Note that you should not completely seal the prism otherwise, you won't be able to refill or empty it.
+
